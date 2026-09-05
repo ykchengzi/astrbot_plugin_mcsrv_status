@@ -4,17 +4,19 @@
 （握手 + status request），获取服务器版本、在线人数、MOTD、favicon 等真实数据。
 
 异常分类（便于插件给出精确提示）：
-- SlpTimeoutError:        TCP 连接超时（端口未放行 / 服务器未启动 / 防火墙丢弃）
-- SlpConnectionRefusedError: 端口拒绝连接（端口未监听）
-- SlpNoResponseError:     TCP 连上但服务器未响应状态查询（可能 enable-status=false）
-- SlpParseError:          服务器响应数据无法解析
-- SlpError:               其他网络错误
+- SlpTimeoutError:            TCP 连接超时（端口未放行 / 服务器未启动 / 防火墙丢弃）
+- SlpConnectionRefusedError:  端口拒绝连接（端口未监听）
+- SlpDnsError:                DNS 域名解析失败（域名不存在 / DNS 服务器无响应）
+- SlpNoResponseError:         TCP 连上但服务器未响应状态查询（可能 enable-status=false）
+- SlpParseError:              服务器响应数据无法解析
+- SlpError:                   其他网络错误
 """
 import asyncio
 import json
 import random
 import socket
 import struct
+import time
 
 DEFAULT_TIMEOUT = 8.0
 MAX_BUF = 65536
@@ -30,6 +32,10 @@ class SlpTimeoutError(SlpError):
 
 class SlpConnectionRefusedError(SlpError):
     """端口拒绝连接。"""
+
+
+class SlpDnsError(SlpError):
+    """DNS 域名解析失败。"""
 
 
 class SlpNoResponseError(SlpError):
@@ -67,15 +73,22 @@ def _parse_varint(b: bytes, pos: int):
 
 
 async def slp_query(host: str, port: int, timeout: float = DEFAULT_TIMEOUT) -> dict:
-    """向目标服务器发起 SLP 状态查询，返回服务器状态 JSON dict。"""
+    """向目标服务器发起 SLP 状态查询，返回服务器状态 JSON dict（含 _ping_ms 字段）。
+
+    返回的 dict 在服务器原始字段基础上额外注入：
+    - _ping_ms: float，从发送握手包到收到完整响应的往返时间（毫秒）。
+    """
+    t_connect_start = time.monotonic()
     try:
         reader, writer = await asyncio.wait_for(
             asyncio.open_connection(host, port), timeout
         )
     except asyncio.TimeoutError:
-        raise SlpTimeoutError("TCP 连接超时") from None
+        raise SlpTimeoutError(f"TCP 连接超时（{timeout:.0f}s）") from None
     except ConnectionRefusedError:
         raise SlpConnectionRefusedError("端口拒绝连接") from None
+    except socket.gaierror:
+        raise SlpDnsError(f"DNS 解析失败：无法解析域名 {host}") from None
     except OSError as e:
         raise SlpError(f"网络错误: {e}") from e
 
@@ -88,6 +101,7 @@ async def slp_query(host: str, port: int, timeout: float = DEFAULT_TIMEOUT) -> d
             + struct.pack(">H", port)
             + _write_varint(1)
         )
+        t_send = time.monotonic()
         writer.write(_write_varint(len(handshake)) + handshake + b"\x01\x00")
         await writer.drain()
 
@@ -121,6 +135,7 @@ async def slp_query(host: str, port: int, timeout: float = DEFAULT_TIMEOUT) -> d
         result = json.loads(raw)
         if not isinstance(result, dict):
             raise SlpParseError("响应不是 JSON 对象")
+        result["_ping_ms"] = round((time.monotonic() - t_send) * 1000, 1)
         return result
     except (SlpError, json.JSONDecodeError, UnicodeDecodeError, ValueError) as e:
         if isinstance(e, (json.JSONDecodeError, UnicodeDecodeError, ValueError)):

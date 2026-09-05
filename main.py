@@ -22,6 +22,7 @@ from astrbot.api.star import Context, Star, register
 
 from .mc_slp import (
     SlpConnectionRefusedError,
+    SlpDnsError,
     SlpError,
     SlpNoResponseError,
     SlpParseError,
@@ -48,7 +49,7 @@ _DEFAULT_ICON = Path(__file__).parent / "assets" / "icon_default.png"
     "mcsrv_status",
     "YKChengZi",
     "查询 Minecraft 服务器的在线状态、版本、玩家数量等信息（默认直连查询，不依赖第三方 API）",
-    "2.1.1",
+    "2.2.0",
     "https://github.com/ykchengzi/astrbot_plugin_mcsrv_status",
 )
 class McSrvStatusPlugin(Star):
@@ -88,14 +89,31 @@ class McSrvStatusPlugin(Star):
 
     @staticmethod
     def _slp_error_text(e: SlpError, host: str, port: int) -> str:
+        if isinstance(e, SlpDnsError):
+            return (
+                f"无法解析服务器地址「{host}」：域名不存在或 DNS 服务器无响应。\n"
+                f"请检查地址拼写是否正确，或尝试使用 IP 地址。"
+            )
         if isinstance(e, SlpTimeoutError):
-            return f"服务器 {host}:{port} 连接超时：端口未放行或服务器未启动。"
+            return (
+                f"连接 {host}:{port} 超时：服务器可能未启动、端口未放行，"
+                f"或防火墙丢弃了数据包。\n请确认服务器正在运行，且 {port} 端口已对外开放。"
+            )
         if isinstance(e, SlpConnectionRefusedError):
-            return f"服务器 {host}:{port} 拒绝连接：端口未监听。"
+            return (
+                f"连接 {host}:{port} 被拒绝：该端口没有服务在监听。\n"
+                f"请检查端口是否正确、服务器是否已启动，或是否使用了 SRV 代理端口。"
+            )
         if isinstance(e, SlpNoResponseError):
-            return f"服务器 {host}:{port} 未响应状态查询：请检查 server.properties 的 enable-status=true。"
+            return (
+                f"{host}:{port} 连接成功但未返回状态信息："
+                f"可能 server.properties 中 enable-status=false，或服务器正在启动中。"
+            )
         if isinstance(e, SlpParseError):
-            return f"服务器 {host}:{port} 返回了无法解析的数据：{e}"
+            return (
+                f"{host}:{port} 返回了无法识别的数据："
+                f"可能不是 Minecraft Java 版服务器，或服务器版本过旧。"
+            )
         return f"查询 {host}:{port} 失败：{e}"
 
     @filter.command("查服")

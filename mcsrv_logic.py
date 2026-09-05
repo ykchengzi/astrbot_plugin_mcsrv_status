@@ -135,6 +135,10 @@ def format_slp_status(host: str, port: int, data: dict) -> str:
     players = data.get("players") or {}
     lines.append(f"玩家：{players.get('online', 0)}/{players.get('max', '?')}")
 
+    ping = data.get("_ping_ms")
+    if ping is not None:
+        lines.append(f"延迟：{ping}ms")
+
     return "\n".join(lines)
 
 
