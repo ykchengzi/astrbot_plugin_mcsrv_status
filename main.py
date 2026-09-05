@@ -20,6 +20,7 @@ from astrbot.api import AstrBotConfig, logger
 from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.star import Context, Star, register
 
+from .mc_bedrock import DEFAULT_BEDROCK_PORT, bedrock_query
 from .mc_slp import (
     SlpConnectionRefusedError,
     SlpDnsError,
@@ -49,7 +50,7 @@ _DEFAULT_ICON = Path(__file__).parent / "assets" / "icon_default.png"
     "mcsrv_status",
     "YKChengZi",
     "查询 Minecraft 服务器的在线状态、版本、玩家数量等信息（默认直连查询，不依赖第三方 API）",
-    "2.2.0",
+    "2.3.0",
     "https://github.com/ykchengzi/astrbot_plugin_mcsrv_status",
 )
 class McSrvStatusPlugin(Star):
@@ -143,34 +144,60 @@ class McSrvStatusPlugin(Star):
             except Exception as e:
                 logger.warning(f"SRV 查询 {host} 失败，使用默认端口: {e}")
 
+        # 基岩版回退端口：用户显式指定了端口则沿用，否则用基岩版默认 19132
+        bedrock_port = connect_port if had_explicit_port else DEFAULT_BEDROCK_PORT
+
+        data = None
+        is_bedrock = False
+        java_err = None
+
+        # 第一步：Java 版 SLP 直连查询
         try:
             data = await slp_query(connect_host, connect_port)
         except SlpError as e:
-            # 直连失败：可选回退 mcsrvstat.us API
-            if self.config.get("fallback_api", False):
-                try:
-                    data = await self._fetch_api_json(address)
-                except Exception as e2:
-                    logger.error(f"API 兜底查询 {address} 失败: {e2}")
-                    yield event.plain_result(
-                        f"直连失败：{self._slp_error_text(e, host, connect_port)}；"
-                        f"API 兜底也失败：{e2}"
-                    )
+            java_err = e
+            # 第二步：Java 版失败，自动回退基岩版 RakNet 查询
+            try:
+                data = await bedrock_query(connect_host, bedrock_port)
+                is_bedrock = True
+            except SlpError as bedrock_err:
+                # 第三步：Java 版和基岩版都失败，可选回退第三方 API
+                if self.config.get("fallback_api", False):
+                    try:
+                        data = await self._fetch_api_json(address)
+                    except Exception as e2:
+                        logger.error(f"API 兜底查询 {address} 失败: {e2}")
+                        yield event.plain_result(
+                            f"Java 版直连失败：{self._slp_error_text(java_err, host, connect_port)}\n"
+                            f"基岩版直连也失败：{self._slp_error_text(bedrock_err, host, bedrock_port)}\n"
+                            f"API 兜底也失败：{e2}"
+                        )
+                        return
+                    chain = [
+                        Comp.Image.fromURL(ICON_BASE + address),
+                        Comp.Plain("\n" + format_status(address, data)),
+                    ]
+                    yield event.chain_result(chain)
                     return
-                chain = [
-                    Comp.Image.fromURL(ICON_BASE + address),
-                    Comp.Plain("\n" + format_status(address, data)),
-                ]
-                yield event.chain_result(chain)
+                logger.error(
+                    f"Java 版查询 {address} 失败: {java_err}；"
+                    f"基岩版查询也失败: {bedrock_err}"
+                )
+                yield event.plain_result(
+                    f"Java 版直连失败：{self._slp_error_text(java_err, host, connect_port)}\n"
+                    f"基岩版直连也失败：{self._slp_error_text(bedrock_err, host, bedrock_port)}"
+                )
                 return
-            logger.error(f"直连查询 {address} 失败: {e}")
-            yield event.plain_result(self._slp_error_text(e, host, connect_port))
-            return
 
-        # 直连成功：第一行输出服务器图标，随后是状态文本
+        # 查询成功（Java 版或基岩版）：第一行输出服务器图标，随后是状态文本
+        display_port = bedrock_port if is_bedrock else connect_port
+        # 基岩版服务器不返回 favicon，使用内置默认图标
+        icon_path = (
+            str(_DEFAULT_ICON) if is_bedrock else self._icon_file(data.get("favicon"))
+        )
         chain = [
-            Comp.Image.fromFileSystem(self._icon_file(data.get("favicon"))),
-            Comp.Plain("\n" + format_slp_status(host, connect_port, data)),
+            Comp.Image.fromFileSystem(icon_path),
+            Comp.Plain("\n" + format_slp_status(host, display_port, data)),
         ]
         yield event.chain_result(chain)
 
