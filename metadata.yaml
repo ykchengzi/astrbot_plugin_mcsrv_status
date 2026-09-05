@@ -18,5 +18,5 @@ desc: |
   - group_servers：为不同 QQ 群设置各自的默认服务器，JSON 格式 {"群号": "服务器地址"}。
   - fallback_api：直连失败时是否回退第三方 API（mcsrvstat.us），默认关闭。
 version: 2.1.0
-author: your_name
-repo: https://github.com/your_name/astrbot_plugin_mcsrv_status
+author: YKChengZi
+repo: https://github.com/ykchengzi/astrbot_plugin_mcsrv_status
