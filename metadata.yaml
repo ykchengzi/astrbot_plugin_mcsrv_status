@@ -20,3 +20,16 @@ desc: |
 version: 2.1.0
 author: YKChengZi
 repo: https://github.com/ykchengzi/astrbot_plugin_mcsrv_status
+astrbot_version: ">=4.0.0"
+support_platforms:
+  - qq_official
+  - qq_official_webhook
+  - aiocqhttp
+tags:
+  - Minecraft
+  - 我的世界
+  - MC
+  - 游戏工具
+  - 状态查询
+  - MC状态查询
+social_link: https://github.com/ykchengzi
