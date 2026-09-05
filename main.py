@@ -48,7 +48,7 @@ _DEFAULT_ICON = Path(__file__).parent / "assets" / "icon_default.png"
     "mcsrv_status",
     "YKChengZi",
     "查询 Minecraft 服务器的在线状态、版本、玩家数量等信息（默认直连查询，不依赖第三方 API）",
-    "2.1.0",
+    "2.1.1",
     "https://github.com/ykchengzi/astrbot_plugin_mcsrv_status",
 )
 class McSrvStatusPlugin(Star):
