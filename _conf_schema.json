@@ -1,0 +1,22 @@
+{
+  "default_server": {
+    "description": "全局默认服务器地址",
+    "type": "string",
+    "default": "",
+    "hint": "支持 mc.example.com 或 mc.example.com:25565。未指定服务器时使用此地址。"
+  },
+  "group_servers": {
+    "description": "按群设置默认服务器（JSON）",
+    "type": "string",
+    "default": "{}",
+    "editor_mode": true,
+    "editor_language": "json",
+    "hint": "格式：{\"群号\": \"服务器地址\"}，例如 {\"123456789\": \"mc.group1.com:25565\", \"987654321\": \"mc.group2.com:30411\"}"
+  },
+  "fallback_api": {
+    "description": "直连失败时回退第三方 API",
+    "type": "bool",
+    "default": false,
+    "hint": "开启后，直连查询失败时会回退使用 mcsrvstat.us API（需联网）。默认关闭，不依赖第三方。"
+  }
+}

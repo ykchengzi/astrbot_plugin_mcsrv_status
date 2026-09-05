@@ -1,0 +1,22 @@
+name: astrbot_plugin_mcsrv_status
+display_name: MC服务器状态查询
+short_desc: 查询 Minecraft 服务器在线状态
+desc: |
+  查询 Minecraft 服务器（Java 版与基岩版）的在线状态、版本、玩家数量、MOTD 等信息。
+
+  【直连模式（默认）】不依赖任何第三方 API：AstrBot 所在机器直接对目标服务器发起
+  Minecraft 原生状态查询协议（SLP），获取服务器真实状态与图标。支持区分
+  「端口未放行 / 端口未监听 / 服务器禁用了状态查询(enable-status=false) / 解析失败」等
+  精确错误提示。
+
+  指令：
+  - /查服 [服务器地址]：查询指定服务器；不带参数时使用配置的默认服务器。
+    地址格式支持 mc.example.com 或 mc.example.com:25565。
+
+  配置：
+  - default_server：全局默认服务器地址。
+  - group_servers：为不同 QQ 群设置各自的默认服务器，JSON 格式 {"群号": "服务器地址"}。
+  - fallback_api：直连失败时是否回退第三方 API（mcsrvstat.us），默认关闭。
+version: 2.1.0
+author: your_name
+repo: https://github.com/your_name/astrbot_plugin_mcsrv_status
