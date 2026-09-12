@@ -67,6 +67,7 @@ MOTD：≫ Amber Cat 橙猫服~ [1.9～26.2]
 ## 依赖
 
 - `Pillow`（状态 Banner 贴图生成，未安装时自动回退「图标 + 文本」）
+- `fonttools`（Banner 文字字形回退：MOTD 特殊符号自动切换字体显示，缺失时退化单字体）
 - `aiohttp`（仅启用 `fallback_api` 时需要，AstrBot 自带）
 
 ## 开发与测试
