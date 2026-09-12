@@ -41,16 +41,57 @@ from .mcsrv_logic import (
     parse_address_from_message,
     parse_host_port,
     resolve_server,
+    slp_summary,
 )
 
 _DEFAULT_ICON = Path(__file__).parent / "assets" / "icon_default.png"
+
+try:
+    from .mc_banner import generate_status_banner
+
+    HAS_BANNER = True
+except ImportError:
+    HAS_BANNER = False
+
+
+def _banner_result(
+    address: str,
+    *,
+    online: bool,
+    icon_path: str,
+    data: dict | None = None,
+    error_text: str = "",
+) -> list | None:
+    """生成状态 Banner 消息链；失败（无 Pillow / 无字体 / 其他异常）返回 None。"""
+    if not HAS_BANNER:
+        return None
+    try:
+        summary = slp_summary(data) if data else {}
+        banner_path = generate_status_banner(
+            address,
+            online=online,
+            icon_path=icon_path,
+            version=summary.get("version", ""),
+            motd=summary.get("motd", ""),
+            players_online=summary.get("players_online", 0),
+            players_max=summary.get("players_max", "?"),
+            ping_ms=summary.get("ping_ms"),
+            error_text=error_text,
+            out_dir=tempfile.gettempdir(),
+        )
+        return [Comp.Image.fromFileSystem(banner_path)]
+    except ImportError:
+        return None
+    except Exception as e:
+        logger.warning(f"Banner 生成失败，回退旧模式: {e}")
+        return None
 
 
 @register(
     "mcsrv_status",
     "YKChengZi",
     "查询 Minecraft 服务器的在线状态、版本、玩家数量等信息（默认直连查询，不依赖第三方 API）",
-    "2.3.1",
+    "2.4.0",
     "https://github.com/ykchengzi/astrbot_plugin_mcsrv_status",
 )
 class McSrvStatusPlugin(Star):
@@ -183,18 +224,33 @@ class McSrvStatusPlugin(Star):
                     f"Java 版查询 {address} 失败: {java_err}；"
                     f"基岩版查询也失败: {bedrock_err}"
                 )
-                yield event.plain_result(
+                err_text = (
                     f"Java 版直连失败：{self._slp_error_text(java_err, host, connect_port)}\n"
                     f"基岩版直连也失败：{self._slp_error_text(bedrock_err, host, bedrock_port)}"
                 )
+                banner = _banner_result(
+                    address,
+                    online=False,
+                    icon_path=str(_DEFAULT_ICON),
+                    error_text=err_text,
+                )
+                if banner:
+                    yield event.chain_result(banner + [Comp.Plain("\n" + err_text)])
+                    return
+                yield event.plain_result(err_text)
                 return
 
-        # 查询成功（Java 版或基岩版）：第一行输出服务器图标，随后是状态文本
+        # 查询成功（Java 版或基岩版）：第一行输出状态 Banner 贴图
         display_port = bedrock_port if is_bedrock else connect_port
         # 基岩版服务器不返回 favicon，使用内置默认图标
         icon_path = (
             str(_DEFAULT_ICON) if is_bedrock else self._icon_file(data.get("favicon"))
         )
+        banner = _banner_result(address, online=True, icon_path=icon_path, data=data)
+        if banner:
+            yield event.chain_result(banner)
+            return
+        # Pillow 缺失或生成失败：回退旧版「图标 + 文本」
         chain = [
             Comp.Image.fromFileSystem(icon_path),
             Comp.Plain("\n" + format_slp_status(host, display_port, data)),

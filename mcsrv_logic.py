@@ -120,6 +120,20 @@ def _motd_text(description) -> str:
     return str(description)
 
 
+def slp_summary(data: dict) -> dict:
+    """提取 SLP 查询结果中的展示字段（供 banner / 文本格式化复用）。"""
+    version = (data.get("version") or {}).get("name") or ""
+    motd = _motd_text(data.get("description"))
+    players = data.get("players") or {}
+    return {
+        "version": version,
+        "motd": motd,
+        "players_online": players.get("online", 0),
+        "players_max": players.get("max", "?"),
+        "ping_ms": data.get("_ping_ms"),
+    }
+
+
 def format_slp_status(host: str, port: int, data: dict) -> str:
     """把直连 SLP 返回的服务器状态格式化为人类可读文本。"""
     lines = [f"服务器：{host}:{port}", "状态：在线"]

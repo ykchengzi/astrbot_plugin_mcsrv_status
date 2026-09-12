@@ -10,6 +10,10 @@ desc: |
   「DNS 解析失败 / 连接超时 / 端口拒绝连接 / 服务器禁用了状态查询(enable-status=false)
   / 响应解析失败」等精确错误提示。
 
+  【状态 Banner】查询结果以一张状态贴图返回（服务器图标 + 状态 + 地址 + MOTD +
+  版本 + 人数 + 延迟），离线时生成离线 Banner 并附错误原因；未安装 Pillow 时
+  自动回退为「图标 + 文本」模式。
+
   指令：
   - /查服 [服务器地址]：查询指定服务器；不带参数时使用配置的默认服务器。
     地址格式支持 mc.example.com 或 mc.example.com:25565。
@@ -18,7 +22,7 @@ desc: |
   - default_server：全局默认服务器地址。
   - group_servers：为不同 QQ 群设置各自的默认服务器，JSON 格式 {"群号": "服务器地址"}。
   - fallback_api：直连失败时是否回退第三方 API（mcsrvstat.us），默认关闭。
-version: 2.3.1
+version: 2.4.0
 author: YKChengZi
 repo: https://github.com/ykchengzi/astrbot_plugin_mcsrv_status
 astrbot_version: ">=4.0.0"
