@@ -91,7 +91,7 @@ def _banner_result(
     "mcsrv_status",
     "YKChengZi",
     "查询 Minecraft 服务器的在线状态、版本、玩家数量等信息（默认直连查询，不依赖第三方 API）",
-    "2.4.3",
+    "2.4.4",
     "https://github.com/ykchengzi/astrbot_plugin_mcsrv_status",
 )
 class McSrvStatusPlugin(Star):
@@ -248,7 +248,13 @@ class McSrvStatusPlugin(Star):
         )
         banner = _banner_result(address, online=True, icon_path=icon_path, data=data)
         if banner:
-            yield event.chain_result(banner)
+            yield event.chain_result(
+                banner
+                + [
+                    Comp.Image.fromFileSystem(icon_path),
+                    Comp.Plain("\n" + format_slp_status(host, display_port, data)),
+                ]
+            )
             return
         # Pillow 缺失或生成失败：回退旧版「图标 + 文本」
         chain = [

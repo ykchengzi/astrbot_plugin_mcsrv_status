@@ -5,7 +5,7 @@ desc: |
   查询 Minecraft 服务器在线状态（Java 版 SLP / 基岩版 RakNet 直连，不依赖第三方 API），
   返回状态 Banner：服务器图标、状态、地址、MOTD、版本、人数、延迟。
   指令 /查服 [地址]，支持全局与按群配置默认服务器。
-version: 2.4.3
+version: 2.4.4
 author: YKChengZi
 repo: https://github.com/ykchengzi/astrbot_plugin_mcsrv_status
 astrbot_version: ">=4.0.0"
