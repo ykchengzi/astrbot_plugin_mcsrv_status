@@ -10,6 +10,7 @@
 - default_server: 全局默认服务器地址（host 或 host:port）。
 - group_servers: 按 QQ 群设置默认服务器，JSON 格式 {"群号": "服务器地址"}。
 - fallback_api: 直连失败时是否回退第三方 API（默认 false）。
+- show_banner / show_icon / show_details / split_message: 输出内容与发送方式自定义。
 """
 import asyncio
 import tempfile
@@ -91,7 +92,7 @@ def _banner_result(
     "mcsrv_status",
     "YKChengZi",
     "查询 Minecraft 服务器的在线状态、版本、玩家数量等信息（默认直连查询，不依赖第三方 API）",
-    "2.4.5",
+    "2.5.0",
     "https://github.com/ykchengzi/astrbot_plugin_mcsrv_status",
 )
 class McSrvStatusPlugin(Star):
@@ -214,10 +215,18 @@ class McSrvStatusPlugin(Star):
                             f"API 兜底也失败：{e2}"
                         )
                         return
-                    chain = [
-                        Comp.Image.fromURL(ICON_BASE + address),
-                        Comp.Plain("\n" + format_status(address, data)),
-                    ]
+                    chain = []
+                    if self.config.get("show_icon", True):
+                        chain.append(Comp.Image.fromURL(ICON_BASE + address))
+                    if self.config.get("show_details", True):
+                        chain.append(
+                            Comp.Plain(
+                                ("\n" if chain else "") + format_status(address, data)
+                            )
+                        )
+                    if not chain:
+                        yield event.plain_result("API 兜底查询成功（图标 / 详情均已关闭，无可输出内容）。")
+                        return
                     yield event.chain_result(chain)
                     return
                 logger.error(
@@ -228,42 +237,66 @@ class McSrvStatusPlugin(Star):
                     f"Java 版直连失败：{self._slp_error_text(java_err, host, connect_port)}\n"
                     f"基岩版直连也失败：{self._slp_error_text(bedrock_err, host, bedrock_port)}"
                 )
-                banner = _banner_result(
-                    address,
-                    online=False,
-                    icon_path=str(_DEFAULT_ICON),
-                    error_text=err_text,
+                show_banner = self.config.get("show_banner", True)
+                show_details = self.config.get("show_details", True)
+                split = self.config.get("split_message", True)
+                banner = (
+                    _banner_result(
+                        address,
+                        online=False,
+                        icon_path=str(_DEFAULT_ICON),
+                        error_text=err_text,
+                    )
+                    if show_banner
+                    else None
                 )
-                if banner:
+                if not banner and not show_details:
+                    yield event.plain_result("查询失败（Banner / 详情均已关闭，无可输出内容）。")
+                    return
+                if banner and show_details and split:
                     yield event.chain_result(banner)
                     yield event.chain_result([Comp.Plain(err_text)])
                     return
-                yield event.plain_result(err_text)
+                second = [Comp.Plain(err_text)] if show_details else []
+                yield event.chain_result((banner or []) + second)
                 return
 
-        # 查询成功（Java 版或基岩版）：第一行输出状态 Banner 贴图
+        # 查询成功（Java 版或基岩版）：按配置组装输出
         display_port = bedrock_port if is_bedrock else connect_port
         # 基岩版服务器不返回 favicon，使用内置默认图标
         icon_path = (
             str(_DEFAULT_ICON) if is_bedrock else self._icon_file(data.get("favicon"))
         )
-        banner = _banner_result(address, online=True, icon_path=icon_path, data=data)
-        if banner:
-            # 分开发送：先 Banner，再「服务器图标 + 文字详情」
-            yield event.chain_result(banner)
-            yield event.chain_result(
-                [
-                    Comp.Image.fromFileSystem(icon_path),
-                    Comp.Plain("\n" + format_slp_status(host, display_port, data)),
-                ]
+        show_banner = self.config.get("show_banner", True)
+        show_icon = self.config.get("show_icon", True)
+        show_details = self.config.get("show_details", True)
+        split = self.config.get("split_message", True)
+
+        banner = (
+            _banner_result(address, online=True, icon_path=icon_path, data=data)
+            if show_banner
+            else None
+        )
+        second = []
+        if show_icon:
+            second.append(Comp.Image.fromFileSystem(icon_path))
+        if show_details:
+            second.append(
+                Comp.Plain(
+                    ("\n" if second else "") + format_slp_status(host, display_port, data)
+                )
+            )
+        if not banner and not second:
+            yield event.plain_result(
+                "未配置任何输出项（Banner / 图标 / 详情均已关闭）。"
             )
             return
-        # Pillow 缺失或生成失败：回退旧版「图标 + 文本」
-        chain = [
-            Comp.Image.fromFileSystem(icon_path),
-            Comp.Plain("\n" + format_slp_status(host, display_port, data)),
-        ]
-        yield event.chain_result(chain)
+        if banner and second and split:
+            # 分两条消息发送：先 Banner，再「图标 + 文字」
+            yield event.chain_result(banner)
+            yield event.chain_result(second)
+            return
+        yield event.chain_result((banner or []) + second)
 
     async def terminate(self):
         """插件被卸载/停用时的清理钩子。"""

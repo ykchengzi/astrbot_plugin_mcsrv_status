@@ -1,21 +1,21 @@
 # astrbot_plugin_mcsrv_status
 
-AstrBot 插件：查询 Minecraft 服务器在线状态。默认使用**直连查询**——AstrBot 所在机器直接对目标服务器发起 Minecraft 原生状态查询协议（SLP），**不依赖任何第三方 API**，国内/自建服也能准确查到真实状态。
+查询 Minecraft 服务器（Java 版与基岩版）的在线状态、版本、玩家数量、MOTD 等信息。
 
 ## 功能
 
-- 指令 `/查服 [服务器地址]` 查询服务器在线状态、版本、MOTD、玩家数
-- **直连查询**（SLP 协议），不经过境外第三方 API，实时且准确
-- 返回一张**状态 Banner 贴图**（服务器图标 + 状态 + 地址 + MOTD + 版本 + 人数 + 延迟），离线时同样生成离线 Banner 并附错误原因；未安装 Pillow 时自动回退为「图标 + 文本」
-- 自动识别 Java 版（SLP/TCP）与基岩版（RakNet/UDP），Java 版失败自动回退基岩版查询
-- 精确错误提示，区分四种情况：端口未放行 / 端口未监听 / 服务器禁用了状态查询 / 数据解析失败
+- 默认**直连查询**（Minecraft 原生 SLP 协议），不依赖第三方 API，国内服务器也能准确查询
+- Java 版直连失败时自动回退基岩版 RakNet（UDP 19132）查询
+- 支持服务器 SRV 记录解析（CDN / Velocity 代理服务器自动识别）
+- 返回状态 Banner 贴图（服务器图标 + 状态 + 地址 + MOTD + 版本 + 人数 + 延迟），未安装 Pillow 时自动回退「图标 + 文本」模式
 - 可配置全局默认服务器，并可为不同 QQ 群设置各自的默认服务器
-- 可选回退第三方 API（`mcsrvstat.us`，默认关闭）
+- 可配置 fallback_api 在直连失败时回退 mcsrvstat.us API（默认关闭）
+- 输出高度可自定义：Banner / 图标 / 文字详情可分别开关，并可选择拆分发送
 
 ## 安装
 
-1. 下载 `astrbot_plugin_mcsrv_status.zip`
-2. AstrBot WebUI → 插件 → 安装插件 → **本地安装**，选择该 zip
+1. 下载本插件（GitHub 仓库或 AstrBot Cloud 插件市场）
+2. 在 AstrBot 插件管理面板中安装并启用
 3. 在插件配置弹窗中填写默认服务器（可选，见下）
 
 ## 配置
@@ -27,6 +27,10 @@ AstrBot 插件：查询 Minecraft 服务器在线状态。默认使用**直连�
 | `default_server` | string | 全局默认服务器地址，如 `mc.example.com` 或 `mc.example.com:25565` |
 | `group_servers` | JSON | 按 QQ 群设置默认服务器，格式 `{"群号": "服务器地址"}`，例：`{"123456789": "mc.group1.com:25565"}` |
 | `fallback_api` | bool | 直连失败时是否回退 mcsrvstat.us API，默认 `false`（不依赖第三方） |
+| `show_banner` | bool | 是否显示状态 Banner 贴图，默认 `true` |
+| `show_icon` | bool | 是否显示服务器图标，默认 `true` |
+| `show_details` | bool | 是否显示文字详情（地址/版本/人数/延迟），默认 `true` |
+| `split_message` | bool | 是否将 Banner 与「图标 + 文字」分两条消息发送，默认 `true`；`false` 时合并为一条消息 |
 
 ## 使用
 
@@ -59,25 +63,23 @@ MOTD：≫ Amber Cat 橙猫服~ [1.9～26.2]
 
 | 提示 | 原因 | 解决 |
 | --- | --- | --- |
-| 连接超时 | 端口未放行 / 服务器未启动 / 防火墙丢弃 | 云安全组、UFW/firewalld 放行对应 TCP 端口 |
-| 端口拒绝连接 | 服务器未监听该端口 | 确认端口号与 SRV 记录、`server-port` 一致 |
-| 未响应状态查询 | 服务器禁用了状态查询 | `server.properties` 中设置 `enable-status=true` |
-| 数据无法解析 | 服务器返回异常数据 | 多为代理/防火墙干扰，检查服务端插件 |
+| 连接超时 | 服务器未启动或防火墙未放行端口 | 确认服务器运行、端口对外开放 |
+| 端口拒绝连接 | 端口无服务监听 | 检查端口是否正确、是否使用 SRV 代理端口 |
+| 无法解析地址 | 域名不存在或 DNS 无响应 | 检查地址拼写或改用 IP |
+| 服务器无响应 | 服务器禁用了状态查询或正在启动 | 检查 `enable-status` 配置 |
+| 无法识别的数据 | 目标不是 Minecraft 服务器 | 确认地址与端口 |
 
 ## 依赖
 
-- `Pillow`（状态 Banner 贴图生成，未安装时自动回退「图标 + 文本」）
-- `fonttools`（Banner 文字字形回退：MOTD 特殊符号自动切换字体显示，缺失时退化单字体）
+- `Pillow`（生成状态 Banner，未安装时自动回退「图标 + 文本」模式）
+- `fonttools`（Banner 特殊符号字形回退）
 - `aiohttp`（仅启用 `fallback_api` 时需要，AstrBot 自带）
 
 ## 开发与测试
 
-```
-python test_slp.py        # SLP 直连客户端（本地 mock 服务器，不联网）
-python test_mcsrv.py      # 核心逻辑 + 真实 API 兼容
-python test_integration.py# handler 端到端集成
-```
+- 测试：`pytest`（测试文件以 `test_` 开头，不随插件分发）
+- 本插件不包含任何需要额外配置的目录结构，`assets/icon_default.png` 为内置默认图标
 
 ## 开源许可
 
-MIT License
+MIT License。详见 [LICENSE](LICENSE)。

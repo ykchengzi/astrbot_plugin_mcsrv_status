@@ -18,5 +18,29 @@
     "type": "bool",
     "default": false,
     "hint": "开启后，直连查询失败时会回退使用 mcsrvstat.us API（需联网）。默认关闭，不依赖第三方。"
+  },
+  "show_banner": {
+    "description": "显示状态 Banner 贴图",
+    "type": "bool",
+    "default": true,
+    "hint": "关闭后不生成状态 Banner，仅输出图标与文字。"
+  },
+  "show_icon": {
+    "description": "显示服务器图标",
+    "type": "bool",
+    "default": true,
+    "hint": "关闭后不显示服务器图标（在线查询中的头像图）。"
+  },
+  "show_details": {
+    "description": "显示文字详情",
+    "type": "bool",
+    "default": true,
+    "hint": "关闭后不输出地址、版本、人数、延迟等文字信息。"
+  },
+  "split_message": {
+    "description": "Banner 与图标/文字分两条消息发送",
+    "type": "bool",
+    "default": true,
+    "hint": "开启：先发 Banner，再发「图标 + 文字」共两条消息；关闭：合并为一条消息发送。"
   }
 }
