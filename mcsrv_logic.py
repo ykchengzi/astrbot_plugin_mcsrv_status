@@ -134,9 +134,16 @@ def slp_summary(data: dict) -> dict:
     }
 
 
-def format_slp_status(host: str, port: int, data: dict) -> str:
-    """把直连 SLP 返回的服务器状态格式化为人类可读文本。"""
-    lines = [f"服务器：{host}:{port}", "状态：在线"]
+def format_slp_status(
+    host: str, port: int, data: dict, display_address: str = ""
+) -> str:
+    """把直连 SLP 返回的服务器状态格式化为人类可读文本。
+
+    display_address: 第一行展示的地址（通常传用户输入的原始地址，观感更好）；
+    为空时展示解析后的 host:port。
+    """
+    shown = display_address or f"{host}:{port}"
+    lines = [f"服务器：{shown}", "状态：在线"]
 
     version = (data.get("version") or {}).get("name")
     if version:
