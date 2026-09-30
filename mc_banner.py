@@ -52,13 +52,13 @@ _FONT_CANDIDATES = [
 _COLOR_CODE_RE = re.compile(r"[§&][0-9a-fk-orA-FK-OR]")
 
 # ---------- Banner 尺寸与布局 ----------
-_WIDTH = 820
-_HEIGHT = 128
-_ICON_SIZE = 74
-_ICON_X = 26          # 图标左上角 x
+_WIDTH = 640
+_HEIGHT = 120
+_ICON_SIZE = 62
+_ICON_X = 20          # 图标左上角 x
 _ICON_Y = (_HEIGHT - _ICON_SIZE) // 2
-_TEXT_X = 122
-_RIGHT_PAD = 20
+_TEXT_X = 98
+_RIGHT_PAD = 16
 _ACCENT_W = 6         # 左侧状态色条宽度
 
 
@@ -306,46 +306,46 @@ def generate_status_banner(
 
     # 行1：状态徽章 + 地址
     badge_text = ("● 在线") if online else ("● 离线")
-    badge_right = _draw_badge(draw, _TEXT_X, 15, badge_text, accent, size=16)
-    addr_gap = 12
-    addr_size = 21
+    badge_right = _draw_badge(draw, _TEXT_X, 13, badge_text, accent, size=15)
+    addr_gap = 10
+    addr_size = 19
     addr = _fit_text(draw, address, addr_size, int(max_text_width - (badge_right - _TEXT_X) - addr_gap))
-    _draw_text(draw, (badge_right + addr_gap, 16), addr, addr_size, _COLOR_ADDR)
+    _draw_text(draw, (badge_right + addr_gap, 14), addr, addr_size, _COLOR_ADDR)
 
     if online:
         # 行2：MOTD（最多两行）
         motd = _clean_motd(motd)
-        y2 = 44
+        y2 = 40
         if motd:
-            motd_lines = _wrap_text(draw, motd, 15, max_text_width, 2)
+            motd_lines = _wrap_text(draw, motd, 14, max_text_width, 2)
             for i, ln in enumerate(motd_lines):
-                _draw_text(draw, (_TEXT_X, y2 + i * 20), ln, 15, _COLOR_MOTD)
+                _draw_text(draw, (_TEXT_X, y2 + i * 18), ln, 14, _COLOR_MOTD)
         # 分隔线
-        draw.line([_TEXT_X, 88, _TEXT_X + max_text_width, 88], fill=_COLOR_DIVIDER, width=1)
+        draw.line([_TEXT_X, 78, _TEXT_X + max_text_width, 78], fill=_COLOR_DIVIDER, width=1)
         # 行3：版本 · 玩家 · 延迟（分段着色）
-        y3 = 97
+        y3 = 87
         x = _TEXT_X
-        size3 = 14
+        size3 = 13
         if version:
             x_end = _draw_text(draw, (x, y3), f"版本 {version}", size3, _COLOR_MUTED)
-            x += x_end + 14
-            draw.ellipse([x - 8, y3 + 6, x - 4, y3 + 10], fill=_COLOR_MUTED)
-            x += 6
+            x += x_end + 12
+            draw.ellipse([x - 7, y3 + 5, x - 3, y3 + 9], fill=_COLOR_MUTED)
+            x += 5
         players_txt = f"玩家 {players_online}/{players_max}"
         x_end = _draw_text(draw, (x, y3), players_txt, size3, _COLOR_YELLOW)
-        x += x_end + 14
-        draw.ellipse([x - 8, y3 + 6, x - 4, y3 + 10], fill=_COLOR_MUTED)
-        x += 6
+        x += x_end + 12
+        draw.ellipse([x - 7, y3 + 5, x - 3, y3 + 9], fill=_COLOR_MUTED)
+        x += 5
         if ping_ms is not None:
             _draw_text(draw, (x, y3), f"延迟 {ping_ms}ms", size3, _ping_color(ping_ms))
     else:
         # 离线：错误原因折行（小字，最多 3 行）
         err = _clean_motd(error_text) or "无法连接服务器"
-        lines = _wrap_text(draw, err, 14, max_text_width, 3)
-        y = 50
+        lines = _wrap_text(draw, err, 13, max_text_width, 3)
+        y = 42
         for ln in lines:
-            _draw_text(draw, (_TEXT_X, y), ln, 14, _COLOR_MOTD)
-            y += 21
+            _draw_text(draw, (_TEXT_X, y), ln, 13, _COLOR_MOTD)
+            y += 19
 
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
