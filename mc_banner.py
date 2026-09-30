@@ -53,7 +53,7 @@ _COLOR_CODE_RE = re.compile(r"[§&][0-9a-fk-orA-FK-OR]")
 
 # ---------- Banner 尺寸与布局 ----------
 _WIDTH = 820
-_HEIGHT = 118
+_HEIGHT = 128
 _ICON_SIZE = 74
 _ICON_X = 26          # 图标左上角 x
 _ICON_Y = (_HEIGHT - _ICON_SIZE) // 2
@@ -313,16 +313,17 @@ def generate_status_banner(
     _draw_text(draw, (badge_right + addr_gap, 16), addr, addr_size, _COLOR_ADDR)
 
     if online:
-        # 行2：MOTD
+        # 行2：MOTD（最多两行）
         motd = _clean_motd(motd)
-        y2 = 52
+        y2 = 44
         if motd:
-            motd_lines = _wrap_text(draw, motd, 15, max_text_width, 1)
-            _draw_text(draw, (_TEXT_X, y2), motd_lines[0], 15, _COLOR_MOTD)
+            motd_lines = _wrap_text(draw, motd, 15, max_text_width, 2)
+            for i, ln in enumerate(motd_lines):
+                _draw_text(draw, (_TEXT_X, y2 + i * 20), ln, 15, _COLOR_MOTD)
         # 分隔线
-        draw.line([_TEXT_X, 80, _TEXT_X + max_text_width, 80], fill=_COLOR_DIVIDER, width=1)
+        draw.line([_TEXT_X, 88, _TEXT_X + max_text_width, 88], fill=_COLOR_DIVIDER, width=1)
         # 行3：版本 · 玩家 · 延迟（分段着色）
-        y3 = 88
+        y3 = 97
         x = _TEXT_X
         size3 = 14
         if version:
